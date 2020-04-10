@@ -1,4 +1,4 @@
-name: Nightly releases
+naame: Nightly releases
 on:
   schedule:
     - cron:  '0 0 * * *'
@@ -64,7 +64,10 @@ jobs:
           mv rice-web/rice-box.go ./web/
       - name: Run goreleaser
         run: |
-          goreleaser -f .goreleaser-nightly.yml --rm-dist --skip-validate --snapshot
+          git fetch --tags
+          git tag -d nightly
+          git tag nightly
+          goreleaser -f .goreleaser-nightly.yml --rm-dist --skip-validate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APP_JSON }}
