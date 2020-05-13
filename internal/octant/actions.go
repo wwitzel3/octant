@@ -12,6 +12,7 @@ import (
 
 const (
 	ActionDeleteObject            = "action.octant.dev/deleteObject"
+	ActionOverviewDrain           = "action.octant.dev/drain"
 	ActionOverviewCordon          = "action.octant.dev/cordon"
 	ActionOverviewUncordon        = "action.octant.dev/uncordon"
 	ActionOverviewContainerEditor = "action.octant.dev/containerEditor"

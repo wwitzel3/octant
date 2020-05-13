@@ -275,6 +275,7 @@ func (co *Overview) ActionPaths() map[string]action.DispatcherFunc {
 		octant.NewPortForwardDelete(co.logger, co.dashConfig.ObjectStore(), co.dashConfig.PortForwarder()),
 		octant.NewCordon(co.dashConfig.ObjectStore(), co.dashConfig.ClusterClient()),
 		octant.NewUncordon(co.dashConfig.ObjectStore(), co.dashConfig.ClusterClient()),
+		octant.NewDrain(co.dashConfig.ObjectStore(), co.dashConfig.ClusterClient()),
 		octant.NewCronJobTrigger(co.dashConfig.ObjectStore(), co.dashConfig.ClusterClient()),
 		octant.NewObjectUpdaterDispatcher(co.dashConfig.ObjectStore()),
 	}
