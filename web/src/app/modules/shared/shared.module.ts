@@ -66,6 +66,7 @@ import { RelativePipe } from './pipes/relative/relative.pipe';
 import { OverflowLabelsComponent } from './components/presentation/overflow-labels/overflow-labels.component';
 import { OverflowSelectorsComponent } from './components/presentation/overflow-selectors/overflow-selectors.component';
 import { PreferencesComponent } from './components/presentation/preferences/preferences.component';
+import { ApplyYamlComponent } from './components/presentation/apply-yaml/apply-yaml.component';
 
 @NgModule({
   declarations: [
@@ -127,6 +128,7 @@ import { PreferencesComponent } from './components/presentation/preferences/pref
     OverflowLabelsComponent,
     OverflowSelectorsComponent,
     PreferencesComponent,
+    ApplyYamlComponent,
   ],
   imports: [
     ClarityModule,
@@ -197,6 +199,7 @@ import { PreferencesComponent } from './components/presentation/preferences/pref
     YamlComponent,
     OverflowLabelsComponent,
     PreferencesComponent,
+    ApplyYamlComponent,
   ],
 })
 export class SharedModule {}

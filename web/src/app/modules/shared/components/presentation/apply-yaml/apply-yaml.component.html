@@ -1,0 +1,14 @@
+<button class="btn btn-sm btn-success-outline" (click)="onCreate()">Create</button>
+
+<clr-modal
+  [(clrModalOpen)]="isOpen"
+  [clrModalSize]="'lg'"
+  [clrModalStaticBackdrop]="true"
+>
+  <h4 class="modal-title">Apply YAML</h4>
+  <div class="modal-body">
+      <app-view-editor
+      [view]="view"></app-view-editor>
+  </div>
+</clr-modal>
+
