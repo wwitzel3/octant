@@ -6,6 +6,7 @@
 package describer
 
 import (
+	"github.com/vmware-tanzu/octant/pkg/access"
 	"sync"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -28,12 +29,12 @@ var (
 )
 
 // NamespacedObjects returns a describer for a namespaced overview.
-func NamespacedOverview() *Section {
+func NamespacedOverview(objectAccess access.Access) *Section {
 	namespacedOverviewOnce.Do(func() {
 		namespacedOverview = initNamespacedOverview()
 	})
 
-	return namespacedOverview
+	return initNamespacedOverview(objectAccess)
 }
 
 // NamespacedCRD returns a describer for namespaces CRDs.
@@ -42,7 +43,7 @@ func NamespacedCRD() *CRDSection {
 		namespacedCRD = initNamespacedCRD()
 	})
 
-	return namespacedCRD
+	return initNamespacedCRD()
 }
 
 func initNamespacedCRD() *CRDSection {
@@ -53,7 +54,8 @@ func initNamespacedCRD() *CRDSection {
 	)
 }
 
-func initNamespacedOverview() *Section {
+func initNamespacedOverview(objectAccess access.Access) *Section {
+	if objectAccess.Allowed()
 	workloadsCronJobs := NewResource(ResourceOptions{
 		Path:           "/workloads/cron-jobs",
 		ObjectStoreKey: store.Key{APIVersion: "batch/v1beta1", Kind: "CronJob"},

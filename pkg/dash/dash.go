@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/vmware-tanzu/octant/internal/objectaccess"
 	"net"
 	"net/http"
 	"os"
@@ -109,6 +110,11 @@ func NewRunner(ctx context.Context, logger log.Logger, options Options) (*Runner
 		return nil, fmt.Errorf("initializing store: %w", err)
 	}
 
+	appObjectAccess, err := objectaccess.NewObjectAccessCache(ctx, clusterClient)
+	if err != nil {
+		return nil, fmt.Errorf("initializing access cache: %w", err)
+	}
+
 	errorStore, err := oerrors.NewErrorStore()
 	if err != nil {
 		return nil, fmt.Errorf("initializing error store: %w", err)
@@ -175,6 +181,7 @@ func NewRunner(ctx context.Context, logger log.Logger, options Options) (*Runner
 		logger,
 		moduleManager,
 		appObjectStore,
+		appObjectAccess,
 		errorStore,
 		pluginManager,
 		portForwarder,

@@ -7,6 +7,7 @@ package config
 
 import (
 	"context"
+	"github.com/vmware-tanzu/octant/pkg/access"
 
 	"github.com/vmware-tanzu/octant/pkg/store"
 
@@ -85,6 +86,8 @@ type Dash interface {
 
 	ObjectStore() store.Store
 
+	ObjectAccess() access.Access
+
 	ErrorStore() internalErr.ErrorStore
 
 	Logger() log.Logger
@@ -115,6 +118,7 @@ type Live struct {
 	logger             log.Logger
 	moduleManager      module.ManagerInterface
 	objectStore        store.Store
+	objectAccess       access.Access
 	errorStore         internalErr.ErrorStore
 	pluginManager      plugin.ManagerInterface
 	portForwarder      portforward.PortForwarder
@@ -134,6 +138,7 @@ func NewLiveConfig(
 	logger log.Logger,
 	moduleManager module.ManagerInterface,
 	objectStore store.Store,
+	objectAccess access.Access,
 	errorStore internalErr.ErrorStore,
 	pluginManager plugin.ManagerInterface,
 	portForwarder portforward.PortForwarder,
@@ -148,6 +153,7 @@ func NewLiveConfig(
 		logger:             logger,
 		moduleManager:      moduleManager,
 		objectStore:        objectStore,
+		objectAccess:       objectAccess,
 		errorStore:         errorStore,
 		pluginManager:      pluginManager,
 		portForwarder:      portForwarder,
@@ -180,6 +186,11 @@ func (l *Live) CRDWatcher() CRDWatcher {
 // ObjectStore returns an object store.
 func (l *Live) ObjectStore() store.Store {
 	return l.objectStore
+}
+
+// ObjectAccess returns an object store.
+func (l *Live) ObjectAccess() access.Access {
+	return l.objectAccess
 }
 
 // ErrorStore returns an error store.

@@ -98,7 +98,7 @@ func (co *Overview) SetContext(ctx context.Context, contextName string) error {
 }
 
 func (co *Overview) bootstrap(ctx context.Context) error {
-	rootDescriber := describer.NamespacedOverview()
+	rootDescriber := describer.NamespacedOverview(co.dashConfig.ObjectAccess())
 
 	if err := rootDescriber.Reset(ctx); err != nil {
 		return err
