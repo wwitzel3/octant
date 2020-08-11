@@ -50,20 +50,8 @@ export class ContentComponent implements OnInit, OnDestroy {
     private router: Router,
     private iconService: IconService,
     private contentService: ContentService,
-    public loadingService: LoadingService
+    private loadingService: LoadingService
   ) {}
-
-  updatePath(url: string) {
-    const tree = this.router.parseUrl(url);
-
-    const primary = tree.root.children.primary;
-    let segments = [];
-    if (primary) {
-      segments = primary.segments;
-    }
-
-    this.handlePathChange(segments, tree.queryParams, false);
-  }
 
   ngOnInit() {
     this.updatePath(this.router.routerState.snapshot.url);
@@ -85,6 +73,18 @@ export class ContentComponent implements OnInit, OnDestroy {
     this.resetView();
     this.contentSubscription.unsubscribe();
     this.loadingSubscription.unsubscribe();
+  }
+
+  updatePath(url: string) {
+    const tree = this.router.parseUrl(url);
+
+    const primary = tree.root.children.primary;
+    let segments = [];
+    if (primary) {
+      segments = primary.segments;
+    }
+
+    this.handlePathChange(segments, tree.queryParams, false);
   }
 
   private handlePathChange(
@@ -129,6 +129,7 @@ export class ContentComponent implements OnInit, OnDestroy {
       this.hasReceivedContent = false;
       return;
     }
+
     this.buttonGroup = contentResponse.content.buttonGroup;
 
     this.extView = contentResponse.content.extensionComponent;

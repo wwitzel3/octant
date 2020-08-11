@@ -3,7 +3,7 @@
 //
 
 import { ClrDatagridSortOrder } from '@clr/angular';
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import {
   Confirmation,
   GridAction,
@@ -12,31 +12,23 @@ import {
   TableRow,
   TableRowWithMetadata,
   TableView,
-  View,
 } from 'src/app/modules/shared/models/content';
 import trackByIndex from 'src/app/util/trackBy/trackByIndex';
 import trackByIdentity from 'src/app/util/trackBy/trackByIdentity';
 import { TimestampComparator } from '../../../../../util/timestamp-comparator';
 import { ViewService } from '../../../services/view/view.service';
 import { ActionService } from '../../../services/action/action.service';
+import { AbstractViewComponent } from '../../abstract-view/abstract-view.component';
 
 @Component({
   selector: 'app-view-datagrid',
   templateUrl: './datagrid.component.html',
   styleUrls: ['./datagrid.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DatagridComponent implements OnChanges {
-  private v: TableView;
+export class DatagridComponent extends AbstractViewComponent<TableView> {
   timeStampComparator = new TimestampComparator();
   sortOrder: ClrDatagridSortOrder = ClrDatagridSortOrder.UNSORTED;
-
-  @Input() set view(v: View) {
-    this.v = v as TableView;
-  }
-
-  get view() {
-    return this.v;
-  }
 
   columns: string[];
   rowsWithMetadata: TableRowWithMetadata[];
@@ -48,40 +40,36 @@ export class DatagridComponent implements OnChanges {
 
   actionDialogOptions: ActionDialogOptions = undefined;
 
-  private previousView: SimpleChanges;
+  private previousView: TableView;
 
   identifyRow = trackByIndex;
   identifyColumn = trackByIdentity;
+  identifyAction = trackByIdentity;
+
   loading: boolean;
 
   constructor(
     private viewService: ViewService,
     private actionService: ActionService
-  ) {}
+  ) {
+    super();
+  }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes.view) {
-      if (
-        JSON.stringify(this.previousView) !==
-        JSON.stringify(changes.view.currentValue)
-      ) {
-        this.title = this.viewService.viewTitleAsText(this.view);
+  update() {
+    this.title = this.viewService.viewTitleAsText(this.view);
 
-        const current = changes.view.currentValue as TableView;
-        this.columns = current.config.columns.map(column => column.name);
+    this.columns = this.v.config.columns.map(column => column.name);
 
-        if (current.config.rows) {
-          this.rowsWithMetadata = this.getRowsWithMetadata(current.config.rows);
-        }
-
-        this.placeholder = current.config.emptyContent;
-        this.lastUpdated = new Date();
-        this.loading = current.config.loading;
-        this.filters = current.config.filters;
-
-        this.previousView = changes.view.currentValue;
-      }
+    if (this.v.config.rows) {
+      this.rowsWithMetadata = this.getRowsWithMetadata(this.v.config.rows);
     }
+
+    this.placeholder = this.v.config.emptyContent;
+    this.lastUpdated = new Date();
+    this.loading = this.v.config.loading;
+    this.filters = this.v.config.filters;
+
+    this.previousView = this.v;
   }
 
   private getRowsWithMetadata(rows: TableRow[]): TableRowWithMetadata[] {

@@ -65,7 +65,7 @@
     "lodash-es": "^4.17.15",
     "monaco-editor": "^0.20.0",
     "ng-monaco-editor": "^2.2.2",
-    "ngx-highlightjs": "^4.0.2",
+    "ngx-highlightjs": "^4.1.1",
     "ngx-markdown": "^8.2.1",
     "rxjs": "^6.6.0",
     "serialize-javascript": "^3.0.0",
