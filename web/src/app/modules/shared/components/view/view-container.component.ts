@@ -74,7 +74,13 @@ export class ViewContainerComponent
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes.view.currentValue) {
-      this.loadView();
+      // TODO: send a checksum so this doesn't need to be calculated here.
+      const prev = JSON.stringify(changes.view.previousValue);
+      const cur = JSON.stringify(changes.view.currentValue);
+
+      if (cur !== prev) {
+        this.loadView();
+      }
     }
   }
 
