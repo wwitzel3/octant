@@ -5,6 +5,7 @@
 
 import {
   AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   ComponentFactoryResolver,
   EventEmitter,
@@ -34,6 +35,7 @@ interface Viewer {
 @Component({
   selector: 'app-view-container',
   template: `<ng-container appView></ng-container>`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ViewContainerComponent
   implements OnInit, OnChanges, AfterViewInit {

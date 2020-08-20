@@ -3,6 +3,7 @@
 //
 import {
   AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   OnDestroy,
@@ -25,6 +26,7 @@ import { AbstractViewComponent } from '../../abstract-view/abstract-view.compone
   selector: 'app-terminal',
   styleUrls: ['./terminal.component.scss'],
   templateUrl: './terminal.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TerminalComponent extends AbstractViewComponent<TerminalView>
   implements OnDestroy, AfterViewInit {
@@ -62,32 +64,30 @@ export class TerminalComponent extends AbstractViewComponent<TerminalView>
   }
 
   ngAfterViewInit() {
-    if (this.v && this.v.config) {
-      const logLevel = 'info';
-      const { terminal } = this.v.config;
-      const { active } = terminal;
-      const disableStdin = !active;
-      this.term = new Terminal({
-        logLevel,
-        disableStdin,
-      });
-      setTimeout(() => {
-        this.initStream();
-      });
-      this.enableResize();
-      this.term.onData(data => {
-        if (active) {
-          this.wss.sendMessage('action.octant.dev/sendTerminalCommand', {
-            key: data,
-          });
-        }
-      });
-      this.fitAddon = new FitAddon();
-      this.term.loadAddon(this.fitAddon);
-      this.term.open(this.terminalDiv.nativeElement);
-      this.term.focus();
-      this.fitAddon.fit();
-    }
+    const logLevel = 'info';
+    const { terminal } = this.v.config;
+    const { active } = terminal;
+    const disableStdin = !active;
+    this.term = new Terminal({
+      logLevel,
+      disableStdin,
+    });
+    setTimeout(() => {
+      this.initStream();
+    });
+    this.enableResize();
+    this.term.onData(data => {
+      if (active) {
+        this.wss.sendMessage('action.octant.dev/sendTerminalCommand', {
+          key: data,
+        });
+      }
+    });
+    this.fitAddon = new FitAddon();
+    this.term.loadAddon(this.fitAddon);
+    this.term.open(this.terminalDiv.nativeElement);
+    this.term.focus();
+    this.fitAddon.fit();
 
     super.ngAfterViewInit();
   }
