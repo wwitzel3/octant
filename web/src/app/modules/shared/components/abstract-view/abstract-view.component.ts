@@ -57,7 +57,6 @@ export abstract class AbstractViewComponent<T>
   }
 
   ping() {
-    console.log(`pinging ${this.constructor.name}`);
     this.update();
   }
 

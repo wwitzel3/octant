@@ -2,9 +2,9 @@
   clrFocusOnViewInit
   class="content-component"
   (scroll)="onScroll($event)"
-  [class.loading-content]="showSpinner || !hasReceivedContent"
+  [class.loading-content]="!hasReceivedContent"
 >
-  <ng-container *ngIf="hasReceivedContent && !showSpinner; else loading">
+  <ng-container *ngIf="hasReceivedContent; else loading">
     <ng-container
       *ngIf="hasTabs; then withTabs; else withoutTabs"
     ></ng-container>

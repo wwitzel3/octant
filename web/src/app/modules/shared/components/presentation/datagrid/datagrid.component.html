@@ -1,11 +1,11 @@
 <h4 *ngIf="showTitle()">{{ title }}</h4>
-<clr-datagrid>
+<clr-datagrid [clrDgLoading]="loading$ | async">
   <clr-dg-placeholder>
     <ng-container *ngIf="placeholder?.length > 0; else emptyPlaceholder">
       {{ placeholder }}
     </ng-container>
     <ng-template #emptyPlaceholder>
-      All content has been filtered out.
+      <!--      All content has been filtered out.-->
     </ng-template>
   </clr-dg-placeholder>
   <clr-dg-column
@@ -49,12 +49,6 @@
         {{ pagination.totalItems }} items
       </ng-container>
     </clr-dg-pagination>
-
-    <ng-container *ngIf="loading">
-      <span class="spinner spinner-inline" style="margin-right: 10px;">
-        Loading...
-      </span>
-    </ng-container>
   </clr-dg-footer>
 </clr-datagrid>
 

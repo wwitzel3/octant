@@ -64,7 +64,7 @@ export class ContentComponent implements OnInit, OnDestroy {
 
     this.loadingSubscription = this.loadingService.showSpinner.subscribe(
       value => {
-        this.showSpinner = value;
+        // this.showSpinner = value;
       }
     );
   }

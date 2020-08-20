@@ -3,7 +3,11 @@
 //
 
 import { ClrDatagridSortOrder } from '@clr/angular';
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+} from '@angular/core';
 import {
   Confirmation,
   GridAction,
@@ -19,6 +23,8 @@ import { TimestampComparator } from '../../../../../util/timestamp-comparator';
 import { ViewService } from '../../../services/view/view.service';
 import { ActionService } from '../../../services/action/action.service';
 import { AbstractViewComponent } from '../../abstract-view/abstract-view.component';
+import { BehaviorSubject, merge, Observable, timer } from 'rxjs';
+import { LoadingService } from '../../../services/loading/loading.service';
 
 @Component({
   selector: 'app-view-datagrid',
@@ -47,10 +53,13 @@ export class DatagridComponent extends AbstractViewComponent<TableView> {
   identifyAction = trackByIdentity;
 
   loading: boolean;
+  loading$: Observable<boolean>;
 
   constructor(
     private viewService: ViewService,
-    private actionService: ActionService
+    private actionService: ActionService,
+    private loadingService: LoadingService,
+    private cdr: ChangeDetectorRef
   ) {
     super();
   }
@@ -58,21 +67,36 @@ export class DatagridComponent extends AbstractViewComponent<TableView> {
   update() {
     this.title = this.viewService.viewTitleAsText(this.view);
 
-    this.columns = this.v.config.columns.map(column => column.name);
+    this.loading = true;
+    let done = false;
+    this.loading$ = this.loadingService.withDelay(
+      new BehaviorSubject(done),
+      650,
+      1000
+    );
 
-    if (this.v.config.rows) {
+    setTimeout(() => {
       this.rowsWithMetadata = this.getRowsWithMetadata(this.v.config.rows);
-    }
-
-    this.placeholder = this.v.config.emptyContent;
-    this.lastUpdated = new Date();
-    this.loading = this.v.config.loading;
+      this.placeholder = this.v.config.emptyContent;
+      this.lastUpdated = new Date();
+      this.loading = this.v.config.loading;
+      done = true;
+      this.cdr.markForCheck();
+    });
+    this.columns = this.v.config.columns.map(column => column.name);
     this.filters = this.v.config.filters;
+    // if (this.v.config.rows) {
+    //   this.rowsWithMetadata = this.getRowsWithMetadata(this.v.config.rows);
+    // }
 
     this.previousView = this.v;
   }
 
   private getRowsWithMetadata(rows: TableRow[]): TableRowWithMetadata[] {
+    if (!rows) {
+      return [];
+    }
+
     return rows.map(row => {
       let actions: GridAction[] = [];
 
