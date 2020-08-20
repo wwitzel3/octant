@@ -41,7 +41,7 @@ export class ViewContainerComponent
   implements OnInit, OnChanges, AfterViewInit {
   @ViewChild(ViewHostDirective, { static: true }) appView: ViewHostDirective;
   @Input() view: View;
-  @Input() enableDebug = true;
+  @Input() enableDebug = false;
   @Output() viewInit: EventEmitter<void> = new EventEmitter<void>();
 
   private start: number;

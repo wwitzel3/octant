@@ -5,6 +5,8 @@
 import {
   AfterContentChecked,
   AfterViewChecked,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   IterableDiffer,
@@ -28,6 +30,7 @@ import { AbstractViewComponent } from '../../abstract-view/abstract-view.compone
   templateUrl: './logs.component.html',
   styleUrls: ['./logs.component.scss'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.Default,
 })
 export class LogsComponent extends AbstractViewComponent<LogsView>
   implements OnInit, OnDestroy, AfterContentChecked, AfterViewChecked {
@@ -53,7 +56,8 @@ export class LogsComponent extends AbstractViewComponent<LogsView>
 
   constructor(
     private podLogsService: PodLogsService,
-    private iterableDiffers: IterableDiffers
+    private iterableDiffers: IterableDiffers,
+    private cdr: ChangeDetectorRef
   ) {
     super();
   }
@@ -62,15 +66,14 @@ export class LogsComponent extends AbstractViewComponent<LogsView>
     this.containerLogsDiffer = this.iterableDiffers
       .find(this.containerLogs)
       .create();
-    if (this.v) {
-      if (this.v.config.containers && this.v.config.containers.length > 0) {
-        this.selectedContainer = this.v.config.containers[0];
-      }
-      this.startStream();
-    }
+    this.startStream();
   }
 
-  protected update() {}
+  protected update() {
+    if (this.v.config.containers && this.v.config.containers.length > 0) {
+      this.selectedContainer = this.v.config.containers[0];
+    }
+  }
 
   onContainerChange(containerSelection: string): void {
     this.selectedContainer = containerSelection;
@@ -116,6 +119,7 @@ export class LogsComponent extends AbstractViewComponent<LogsView>
           }
           this.containerLogs.push(entry);
           this.updateSelectedCount();
+          this.cdr.markForCheck();
         }
       );
     }
