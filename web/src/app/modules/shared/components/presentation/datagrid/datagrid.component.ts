@@ -46,8 +46,6 @@ export class DatagridComponent extends AbstractViewComponent<TableView> {
 
   actionDialogOptions: ActionDialogOptions = undefined;
 
-  private previousView: TableView;
-
   identifyRow = trackByIndex;
   identifyColumn = trackByIdentity;
   identifyAction = trackByIdentity;
@@ -68,28 +66,21 @@ export class DatagridComponent extends AbstractViewComponent<TableView> {
     this.title = this.viewService.viewTitleAsText(this.view);
 
     this.loading = true;
-    let done = false;
-    this.loading$ = this.loadingService.withDelay(
-      new BehaviorSubject(done),
-      650,
-      1000
-    );
+
+    const done = new BehaviorSubject(false);
+    this.loading$ = this.loadingService.withDelay(done, 250, 1000);
 
     setTimeout(() => {
       this.rowsWithMetadata = this.getRowsWithMetadata(this.v.config.rows);
       this.placeholder = this.v.config.emptyContent;
       this.lastUpdated = new Date();
       this.loading = this.v.config.loading;
-      done = true;
+      done.next(true);
+      done.complete();
       this.cdr.markForCheck();
     });
     this.columns = this.v.config.columns.map(column => column.name);
     this.filters = this.v.config.filters;
-    // if (this.v.config.rows) {
-    //   this.rowsWithMetadata = this.getRowsWithMetadata(this.v.config.rows);
-    // }
-
-    this.previousView = this.v;
   }
 
   private getRowsWithMetadata(rows: TableRow[]): TableRowWithMetadata[] {

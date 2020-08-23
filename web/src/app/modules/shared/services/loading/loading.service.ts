@@ -9,7 +9,7 @@ import {
   distinctUntilChanged,
   mapTo,
   startWith,
-  takeWhile,
+  takeUntil,
 } from 'rxjs/operators';
 
 @Injectable({
@@ -20,34 +20,17 @@ export class LoadingService {
 
   constructor() {}
 
-  showSpinner: Observable<boolean> = new BehaviorSubject(false);
-
-  // TODO: (bryanl) I don't think this works like we think it does.
-  // public showSpinner: Observable<boolean> = merge(
-  //   timer(650).pipe(
-  //     // show only if operation > 650ms
-  //     mapTo(true),
-  //     takeWhile(() => !this.requestComplete.value)
-  //   ), // if shown, stay at least 1sec to prevent flicker
-  //   combineLatest([this.requestComplete, timer(1650)]).pipe(mapTo(false))
-  // ).pipe(startWith(false), distinctUntilChanged());
-
   withDelay(
     watch: Observable<boolean>,
     after: number,
     atLeast: number
   ): Observable<boolean> {
-    let cur: boolean;
-    watch.subscribe(value => (cur = value));
+    const loadingTimer = timer(after).pipe(takeUntil(watch));
+    const holdTimer = timer(after + atLeast);
 
-    return merge(
-      timer(after).pipe(
-        mapTo(true),
-        takeWhile(() => !cur)
-      ),
-      combineLatest([this.requestComplete, timer(after + atLeast)]).pipe(
-        mapTo(false)
-      )
+    return merge<boolean>(
+      loadingTimer.pipe(mapTo(true)),
+      combineLatest([watch, holdTimer]).pipe(mapTo(false))
     ).pipe(startWith(false), distinctUntilChanged());
   }
 }

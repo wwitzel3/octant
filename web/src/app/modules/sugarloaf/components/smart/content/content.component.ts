@@ -62,17 +62,21 @@ export class ContentComponent implements OnInit, OnDestroy {
       }
     );
 
-    this.loadingSubscription = this.loadingService.showSpinner.subscribe(
-      value => {
-        // this.showSpinner = value;
-      }
-    );
+    this.loadingService
+      .withDelay(this.loadingService.requestComplete, 650, 1000)
+      .subscribe(v => {
+        this.showSpinner = v;
+      });
   }
 
   ngOnDestroy() {
     this.resetView();
-    this.contentSubscription.unsubscribe();
-    this.loadingSubscription.unsubscribe();
+    if (this.contentSubscription) {
+      this.contentSubscription.unsubscribe();
+    }
+    if (this.loadingSubscription) {
+      this.loadingSubscription.unsubscribe();
+    }
   }
 
   updatePath(url: string) {
