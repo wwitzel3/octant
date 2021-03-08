@@ -51,7 +51,10 @@ func acceptedHosts() []string {
 	}
 
 	hosts = append(hosts, host)
-	return hosts
+	copyHosts := make([]string, len(hosts))
+	copy(copyHosts, hosts)
+
+	return copyHosts
 }
 
 // Listener returns the default listener if OCTANT_LISTENER_ADDR is not set.
@@ -120,6 +123,7 @@ type API struct {
 	dashConfig       config.Dash
 	logger           log.Logger
 	wsClientManager  *WebsocketClientManager
+	acceptedHosts    []string
 
 	modulePaths   map[string]module.Module
 	modules       []module.Module
@@ -140,6 +144,7 @@ func New(ctx context.Context, prefix string, actionDispatcher ActionDispatcher, 
 		logger:           logger,
 		forceUpdateCh:    make(chan bool, 1),
 		wsClientManager:  websocketClientManager,
+		acceptedHosts:    acceptedHosts(),
 	}
 }
 
@@ -154,7 +159,7 @@ func (a *API) Handler(ctx context.Context) (http.Handler, error) {
 		return nil, fmt.Errorf("missing dashConfig")
 	}
 	router := mux.NewRouter()
-	router.Use(rebindHandler(ctx, acceptedHosts()))
+	router.Use(rebindHandler(ctx, a.acceptedHosts))
 
 	s := router.PathPrefix(a.prefix).Subrouter()
 
@@ -176,6 +181,7 @@ type LoadingAPI struct {
 	prefix           string
 	logger           log.Logger
 	wsClientManager  *WebsocketClientManager
+	acceptedHosts    []string
 
 	modulePaths   map[string]module.Module
 	modules       []module.Module
@@ -195,6 +201,7 @@ func NewLoadingAPI(ctx context.Context, prefix string, actionDispatcher ActionDi
 		logger:           logger,
 		forceUpdateCh:    make(chan bool, 1),
 		wsClientManager:  websocketClientManager,
+		acceptedHosts:    acceptedHosts(),
 	}
 }
 
@@ -206,7 +213,7 @@ func (l *LoadingAPI) ForceUpdate() error {
 // Handler contains a list of handlers
 func (l *LoadingAPI) Handler(ctx context.Context) (http.Handler, error) {
 	router := mux.NewRouter()
-	router.Use(rebindHandler(ctx, acceptedHosts()))
+	router.Use(rebindHandler(ctx, l.acceptedHosts))
 
 	s := router.PathPrefix(l.prefix).Subrouter()
 
