@@ -43,12 +43,13 @@ type DynamicCache struct {
 	cancel context.CancelFunc
 	client cluster.ClientInterface
 
-	informerFactory dynamicinformer.DynamicSharedInformerFactory
-	knownInformers  sync.Map // gvr:GenericInformer
-	unwatched       sync.Map // gvr:bool
-	gvrCache        sync.Map // gk:gvr
+	// informerFactory dynamicinformer.DynamicSharedInformerFactory
+	knownFactories sync.Map // namespace:InformerFactory
+	knownInformers sync.Map // gvr:GenericInformer
+	unwatched      sync.Map // gvr:bool
+	gvrCache       sync.Map // gk:gvr
 
-	removeCh chan schema.GroupVersionResource
+	removeCh chan informerKey
 	mu       sync.Mutex
 }
 
@@ -56,41 +57,57 @@ var _ store.Store = (*DynamicCache)(nil)
 
 type Option func(*DynamicCache)
 
-func WithDynamicSharedInformerFactory(factory dynamicinformer.DynamicSharedInformerFactory) Option {
-	return func(d *DynamicCache) {
-		d.informerFactory = factory
-	}
-}
+// func WithDynamicSharedInformerFactory(factory dynamicinformer.DynamicSharedInformerFactory) Option {
+// 	return func(d *DynamicCache) {
+// 		d.informerFactory = factory
+// 	}
+// }
 
 func NewDynamicCache(ctx context.Context, client cluster.ClientInterface, opts ...Option) (*DynamicCache, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	dynamicClient, err := client.DynamicClient()
-	if err != nil {
-		cancel()
-		return nil, err
-	}
 
 	dc := &DynamicCache{
 		ctx:            ctx,
 		cancel:         cancel,
 		client:         client,
+		knownFactories: sync.Map{},
 		knownInformers: sync.Map{},
 		unwatched:      sync.Map{},
 		gvrCache:       sync.Map{},
-		removeCh:       make(chan schema.GroupVersionResource),
-	}
-
-	for _, opt := range opts {
-		opt(dc)
-	}
-
-	if dc.informerFactory == nil {
-		dc.informerFactory = dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, resyncPeriod)
+		removeCh:       make(chan informerKey),
 	}
 
 	go dc.worker()
 
 	return dc, nil
+}
+
+func (d *DynamicCache) GetOrCreateFactory(ctx context.Context, namespace string) (dynamicinformer.DynamicSharedInformerFactory, error) {
+	_, span := trace.StartSpan(ctx, "dynamicCache:GetOrCreateFactory")
+	defer span.End()
+
+	v, ok := d.knownFactories.Load(namespace)
+	if !ok {
+		span.AddAttributes(
+			trace.StringAttribute("namespace", fmt.Sprintf("%s", namespace)),
+			trace.BoolAttribute("cached", true),
+		)
+
+		dynamicClient, err := d.client.DynamicClient()
+		if err != nil {
+			return nil, err
+		}
+		f := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, resyncPeriod, namespace, nil)
+		d.knownFactories.Store(namespace, f)
+		return f, nil
+	}
+
+	span.AddAttributes(
+		trace.StringAttribute("namespace", fmt.Sprintf("%s", namespace)),
+		trace.BoolAttribute("cached", true),
+	)
+
+	return v.(dynamicinformer.DynamicSharedInformerFactory), nil
 }
 
 func (d *DynamicCache) List(ctx context.Context, key store.Key) (list *unstructured.UnstructuredList, loading bool, err error) {
@@ -205,12 +222,10 @@ func (d *DynamicCache) UpdateClusterClient(ctx context.Context, client cluster.C
 	d.stopAllInformers()
 
 	d.client = client
-	dynamicClient, err := client.DynamicClient()
-	if err != nil {
-		return err
-	}
 
-	d.informerFactory = dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, resyncPeriod)
+	d.knownFactories = sync.Map{}
+	d.GetOrCreateFactory(ctx, client.DefaultNamespace())
+
 	d.knownInformers = sync.Map{}
 	d.unwatched = sync.Map{}
 
@@ -321,13 +336,13 @@ func (d *DynamicCache) Watch(ctx context.Context, key store.Key, handler cache.R
 		return err
 	}
 
-	if d.isUnwatched(ctx, gvr) {
+	if d.isUnwatched(ctx, key.Namespace, gvr) {
 		return fmt.Errorf("watcher was unable to start for %s", gvr)
 	}
 
 	span.AddAttributes(trace.StringAttribute("key", fmt.Sprintf("%s", key)))
 
-	d.forResource(ctx, gvr, handler)
+	d.forResource(ctx, key.Namespace, gvr, handler)
 
 	return err
 }
@@ -342,9 +357,9 @@ func (d *DynamicCache) worker() {
 		case <-d.ctx.Done():
 			d.stopAllInformers()
 			return
-		case gvr := <-d.removeCh:
-			d.unwatched.Store(gvr, true)
-			v, ok := d.knownInformers.LoadAndDelete(gvr)
+		case key := <-d.removeCh:
+			d.unwatched.Store(key, true)
+			v, ok := d.knownInformers.LoadAndDelete(key)
 			if ok {
 				ii := v.(interuptibleInformer)
 				ii.Stop()
@@ -363,23 +378,30 @@ func (d *DynamicCache) stopAllInformers() {
 	})
 }
 
-func (d *DynamicCache) isUnwatched(ctx context.Context, gvr schema.GroupVersionResource) bool {
+func (d *DynamicCache) isUnwatched(ctx context.Context, namespace string, gvr schema.GroupVersionResource) bool {
 	_, ok := d.unwatched.Load(gvr)
 	return ok
 }
 
-func (d *DynamicCache) forResource(ctx context.Context, gvr schema.GroupVersionResource, handler cache.ResourceEventHandler) interuptibleInformer {
+func (d *DynamicCache) forResource(ctx context.Context, namespace string, gvr schema.GroupVersionResource, handler cache.ResourceEventHandler) (interuptibleInformer, error) {
 	_, span := trace.StartSpan(ctx, "dynamicCache:forResource")
 	defer span.End()
 
 	logger := log.From(ctx)
 	logger = logger.With("dynamicCache", "forResource")
 
-	v, ok := d.knownInformers.Load(gvr)
+	f, err := d.GetOrCreateFactory(ctx, namespace)
+	if err != nil {
+		return interuptibleInformer{}, err
+	}
+
+	key := informerKey{namespace: namespace, gvr: gvr}
+
+	v, ok := d.knownInformers.Load(key)
 	if !ok {
-		i := d.informerFactory.ForResource(gvr)
+		i := f.ForResource(gvr)
 		stopCh := make(chan struct{})
-		i.Informer().SetWatchErrorHandler(d.watchErrorHandler(ctx, gvr, stopCh))
+		i.Informer().SetWatchErrorHandler(d.watchErrorHandler(ctx, namespace, gvr, stopCh))
 		if handler != nil {
 			i.Informer().AddEventHandlerWithResyncPeriod(handler, resyncPeriod)
 		}
@@ -395,14 +417,14 @@ func (d *DynamicCache) forResource(ctx context.Context, gvr schema.GroupVersionR
 			i,
 			gvr,
 		}
-		d.knownInformers.Store(gvr, ii)
-		return ii
+		d.knownInformers.Store(key, ii)
+		return ii, nil
 	}
 	ii := v.(interuptibleInformer)
 	if handler != nil {
 		ii.informer.Informer().AddEventHandlerWithResyncPeriod(handler, resyncPeriod)
 	}
-	return ii
+	return ii, nil
 }
 
 func (d *DynamicCache) listerForResource(ctx context.Context, key store.Key) (lister, error) {
@@ -419,11 +441,14 @@ func (d *DynamicCache) listerForResource(ctx context.Context, key store.Key) (li
 		trace.StringAttribute("gvr", fmt.Sprintf("%s", gvr)),
 	)
 
-	if d.isUnwatched(ctx, gvr) {
+	if d.isUnwatched(ctx, key.Namespace, gvr) {
 		return nil, fmt.Errorf("unable to get Lister for %s, watcher was unable to start", gvr)
 	}
 
-	ii := d.forResource(ctx, gvr, nil)
+	ii, err := d.forResource(ctx, key.Namespace, gvr, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	var l lister
 	if key.Namespace == "" {
@@ -435,7 +460,7 @@ func (d *DynamicCache) listerForResource(ctx context.Context, key store.Key) (li
 	return l, nil
 }
 
-func (d *DynamicCache) watchErrorHandler(ctx context.Context, gvr schema.GroupVersionResource, stopCh chan struct{}) func(*cache.Reflector, error) {
+func (d *DynamicCache) watchErrorHandler(ctx context.Context, namespace string, gvr schema.GroupVersionResource, stopCh chan struct{}) func(*cache.Reflector, error) {
 	return func(r *cache.Reflector, err error) {
 		_, span := trace.StartSpan(ctx, "dynamicCache:watchErrorHandler")
 		defer span.End()
@@ -445,7 +470,8 @@ func (d *DynamicCache) watchErrorHandler(ctx context.Context, gvr schema.GroupVe
 		logger := log.From(ctx)
 		logger.Warnf("unable to start watcher ", err.Error())
 
-		d.removeCh <- gvr
+		key := informerKey{namespace: namespace, gvr: gvr}
+		d.removeCh <- key
 	}
 }
 
