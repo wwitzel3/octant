@@ -9,8 +9,8 @@ import (
 	"github.com/gorilla/websocket"
 
 	internalAPI "github.com/vmware-tanzu/octant/internal/api"
-	"github.com/vmware-tanzu/octant/internal/config"
 	"github.com/vmware-tanzu/octant/pkg/api"
+	"github.com/vmware-tanzu/octant/pkg/config"
 )
 
 type WebsocketConnectionFactory struct {
