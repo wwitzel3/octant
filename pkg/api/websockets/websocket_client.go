@@ -92,6 +92,9 @@ func NewWebsocketClient(ctx context.Context, conn *websocket.Conn, manager api.C
 		client.RegisterHandler(handler)
 	}
 
+	go client.readPump()
+	go client.writePump()
+
 	logger.Debugf("created websocket client")
 
 	return client
@@ -121,6 +124,9 @@ func NewTemporaryWebsocketClient(ctx context.Context, conn *websocket.Conn, mana
 	for _, handler := range state.Handlers() {
 		client.RegisterHandler(handler)
 	}
+
+	go client.readPump()
+	go client.writePump()
 
 	return client
 }
